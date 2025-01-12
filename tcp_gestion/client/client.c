@@ -65,7 +65,7 @@ static void app(const char *address, const char *name)
             break;
          }
          puts(buffer); //on l'inscrit sur le tableau de char buffer du client
-         printf("Lecture d'une réponse : puts(buffer) : %s\n",buffer);
+         // printf("Lecture d'une réponse : puts(buffer) : %s\n",buffer);
       }
    }
 

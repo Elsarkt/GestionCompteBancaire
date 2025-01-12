@@ -49,11 +49,11 @@ static void app(void)
          break;
       }
       else if(FD_ISSET(sock, &rdfs))
-      //Si on lit qc sur le sock du serveur
+      //Si un client se connecte : Si on lit qc sur le sock du serveur
       {
          /* new client */
          SOCKADDR_IN csin = { 0 };
-         size_t sinsize = sizeof csin;
+         socklen_t sinsize = sizeof csin; //origin size_t
          //Nouveau socket pour communiquer avec le client 
          int csock = accept(sock, (SOCKADDR *)&csin, &sinsize); //accepte la connexion d'un socket sur le socket sock
          if(csock == SOCKET_ERROR)
@@ -73,14 +73,16 @@ static void app(void)
          max = csock > max ? csock : max;
 
          FD_SET(csock, &rdfs);
-
+         
+         //création objet client avec socket et pseudo pour discuter avec lui
          Client c = { csock };
          strncpy(c.name, buffer, BUF_SIZE - 1);
+         printf("c.name de la nouvelle connexion : %s\n",c.name);
          clients[actual] = c;
          actual++;
       }
       else
-      //rien reçu sur sock du serveur
+      //Pas de nouvelles connexions : rien sur socket sock du serveur
       {
          int i = 0;
          for(i = 0; i < actual; i++)
@@ -159,6 +161,14 @@ static int init_connection(void)
    if(sock == INVALID_SOCKET)
    {
       perror("socket()");
+      exit(errno);
+   }
+
+   //permet la réutilisation de l'adresse directement après la fermeture de la précédente conenxion
+   int optval = 1;
+   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1)
+   {
+      perror("setsockopt()");
       exit(errno);
    }
 
