@@ -36,7 +36,7 @@ static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
 void requete_type(Client client, const char* buffer, char buffercopy[], char* param[]);
 Client nouveau_client(int nbCompte, SOCKET csock, const char* buffer,char* buffercopy, int actual);
-static void reponseServeur(const char *buffer, Client c, char* tabRequete[]);
+static void reponseServeur(const char *buffer, Client c, char* tabRequete[], int nbCompte);
 
 
 

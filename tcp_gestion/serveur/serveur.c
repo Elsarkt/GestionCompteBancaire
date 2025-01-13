@@ -72,6 +72,7 @@ static void app(void) {
          char buffercopy[BUF_SIZE];
          Client c = nouveau_client(nbCompte, csock, buffer, buffercopy, actual);
          clients[actual] = c;
+         nbCompte++;
          actual++;
       }
       else {
@@ -104,7 +105,7 @@ static void app(void) {
                            if (tabRequete[j] != NULL) printf("Dans debug %s \n", tabRequete[j]);
                         }
                   #endif
-                  reponseServeur(buffer, clients[i], tabRequete);
+                  reponseServeur(buffer, clients[i], tabRequete, nbCompte);
                }
                break;
             }
@@ -133,56 +134,75 @@ static void remove_client(Client *clients, int to_remove, int *actual){
 }
 
 
-static void reponseServeur(const char *buffer, Client c, char* tabRequete[]) {
+static void reponseServeur(const char *buffer, Client c, char* tabRequete[], int nbCompte) {
    // int i = 0;
    char message[BUF_SIZE];
    message[0] = 0;
+   int compte_trouve = -1;
+
    int id_compte = atoi(tabRequete[2]); //conversion char* à int
-    
+   if (id_compte < 0 || id_compte >= nbCompte) {
+      snprintf(message, BUF_SIZE, "Erreur : compte %d non trouvé.\n", id_compte);
+      write_client(c.sock, message);
+   }
+
    if (tabRequete == NULL || tabRequete[0] == NULL || tabRequete[3] == NULL || tabRequete[4] == NULL) {
       printf("Erreur : tabRequete invalide.\n");
    }
 
    if(strcmp(c.password, tabRequete[3]) == 0) {//le mdp correspond toujours au 3ème argument
           // Vérifier si l'id_compte correspond à un compte du client
-      int compte_trouve = 0;
       for (int i = 0; i<100; i++) { //Supposons qu'il y a moins que 500 comptes crées dans la base de données
          if (c.comptes[i].idCompte == id_compte) {
-            compte_trouve = 1;
+            compte_trouve = i;
             break;
          }
       }
-      if (!compte_trouve) snprintf(message, BUF_SIZE, "Erreur : compte %d non trouvé.\n", id_compte);
+      if (compte_trouve == -1) snprintf(message, BUF_SIZE, "Erreur : compte %d non trouvé.\n", id_compte);
       else{
          if (strcmp(tabRequete[0], "AJOUT") == 0){
             int somme = atoi(tabRequete[4]);
-            c.comptes[id_compte].montant += somme; //On ajoute la somme voulue sur le compte identifié
+            c.comptes[compte_trouve].montant += somme; //On ajoute la somme voulue sur le compte identifié
             snprintf(message, BUF_SIZE, "AJOUT de %d€ sur votre compte\n", somme);
          } 
-         else if(strcmp(tabRequete[0], "OPERATIONS")){
-            printf("dans reponseServeur OPERATIONS\n");
+         else if(strcmp(tabRequete[0], "OPERATIONS")==0){
             snprintf(message, BUF_SIZE, "Liste des 10 dernières opérations :\n");
             write_client(c.sock, message);
-            for(int i=0; i<10; i++){
-               snprintf(message, BUF_SIZE, "%s\n",c.comptes[id_compte].operations[i]);
-               write_client(c.sock, message);
+            for(int h=0; h<10; h++){
+               if (c.comptes[compte_trouve].operations[h] != NULL) {
+                  snprintf(message, BUF_SIZE, "%s\n",c.comptes[compte_trouve].operations[h]);
+                  write_client(c.sock, message);
+               }
             }
             snprintf(message, BUF_SIZE, "\n");
          }
-         else snprintf(message, BUF_SIZE, "on verra ça plus tard\n");
+         else if(strcmp(tabRequete[0], "SOLDE")==0){
+            snprintf(message, BUF_SIZE, "Votre SOLDE est de %d€\n", c.comptes[compte_trouve].montant );
+         }
+            else  if(strcmp(tabRequete[0], "RETRAIT")==0){
+            int somme = atoi(tabRequete[4]);
+            c.comptes[compte_trouve].montant -= somme; //On ajoute la somme voulue sur le compte identifié
+            snprintf(message, BUF_SIZE, "RETRAIT de %d€ de votre compte\n", somme);
+         }
+         else snprintf(message, BUF_SIZE, "Instruction inexistante");
       } 
    } else snprintf(message, BUF_SIZE, "Mode de passe érroné\n");
 
-   //Décaler les opérations existantes vers la droite
-   for (int j = 9; j > 0; j--) { //operations est un tab de 10 str
-      c.comptes[id_compte].operations[j] = c.comptes[id_compte].operations[j - 1];
-   }
-   // Ajouter la nouvelle opération en première position
-   c.comptes[id_compte].operations[0] = strdup(message);
-   if (c.comptes[id_compte].operations[0] == NULL) {
-      perror("Erreur d'allocation mémoire pour operations[0]");
-      return;
-   }
+   // Décaler les opérations existantes vers la droite
+      for (int j = 9; j > 0; j--) {
+         if (c.comptes[compte_trouve].operations[j] != NULL) {
+            free(c.comptes[compte_trouve].operations[j]); // Libère la mémoire de l'opération qui sera écrasée
+         }
+         c.comptes[compte_trouve].operations[j] = c.comptes[compte_trouve].operations[j - 1];
+      }
+      if (c.comptes[compte_trouve].operations[0] != NULL) {
+         free(c.comptes[compte_trouve].operations[0]); // Libère l'ancienne opération en position 0
+      }
+      c.comptes[compte_trouve].operations[0] = strdup(message); // Ajoute la nouvelle opération en première position
+      if (c.comptes[compte_trouve].operations[0] == NULL) {
+         perror("Erreur d'allocation mémoire pour operations[0]");
+         return;
+      }
 
    write_client(c.sock, message);
 }
@@ -347,10 +367,10 @@ Client nouveau_client(int nbCompte, SOCKET csock, const char* buffer, char buffe
    //Création d'un compte par client pour le moment
    c.comptes->idCompte = nbCompte; //premier compte initialisé à l'ordre dans lequel le client s'est co
    c.comptes->montant = 0;
-   for (int i = 0; i < 5; i++) {
+   for (int i = 0; i < 10; i++) {
       c.comptes->operations[i] = NULL; //initialisation de toutes les cases de operation du compte à NULL
    }
-
+   c.nbCompteclient = 1;
    printf("Nouveau client dans notre banque : %s, id_client : %d, id_compte : %d, somme : %d\n", c.name, actual, c.comptes->idCompte, c.comptes->montant);
    //Réponse serveur nouveau client
    return c;

@@ -17,6 +17,7 @@ typedef struct
    char name[BUF_SIZE];
    Compte* comptes; //Tableau des comptes d'un client
    char password[BUF_SIZE];
+   int nbCompteclient;
 }Client;
 
 
