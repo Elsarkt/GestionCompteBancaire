@@ -41,23 +41,3 @@ static void reponseServeur(const char *buffer, Client c, char* tabRequete[], int
 
 
 #endif /* guard */
-
-
-  // Décaler les opérations existantes vers la droite
-   // for (int j = 9; j > 0; j--) {
-   //    if (c.comptes[compte_trouve].operations[j] != NULL) {
-   //       // free(c.comptes[compte_trouve].operations[j]); // Libère la mémoire de l'opération qui sera écrasée
-   //       c.comptes[compte_trouve].operations[j] = NULL;
-   //    }
-   //    c.comptes[compte_trouve].operations[j] = c.comptes[compte_trouve].operations[j - 1];
-   // }
-   // if (c.comptes[compte_trouve].operations[0] != NULL) {
-   //    // free(c.comptes[compte_trouve].operations[0]); // Libère l'ancienne opération en position 0
-   //    c.comptes[compte_trouve].operations[0] = NULL;
-   // }
-   // char* copieMsg = strdup(message);
-   // if (copieMsg == NULL) {
-   //    perror("Erreur d'allocation mémoire pour operations[0]");
-   // }
-   // c.comptes[compte_trouve].operations[0] = copieMsg; // Ajoute la nouvelle opération en première position
-   // char *temp;

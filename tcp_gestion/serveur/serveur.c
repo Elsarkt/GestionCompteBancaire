@@ -6,7 +6,7 @@
 #include "serveur.h"
 #include "client.h"
 
-#define DEBBUG
+// #define DEBBUG
 
 
 static void app(void) {
