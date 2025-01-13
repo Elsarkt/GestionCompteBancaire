@@ -122,6 +122,17 @@ static void clear_clients(Client *clients, int actual){
    for(i = 0; i < actual; i++)
    {
       closesocket(clients[i].sock);
+      if (clients[i].comptes != NULL){
+         for(int j=0; j<10; j++){
+            if(clients[i].comptes->operations[j]){
+               free(clients[i].comptes->operations[j]);
+               clients[i].comptes->operations[j] = NULL; 
+            }
+         }
+         free(clients[i].comptes);
+         clients[i].comptes = NULL;
+      }
+
    }
 }
 
@@ -146,7 +157,7 @@ static void reponseServeur(const char *buffer, Client c, char* tabRequete[], int
       write_client(c.sock, message);
    }
 
-   if (tabRequete == NULL || tabRequete[0] == NULL || tabRequete[3] == NULL || tabRequete[4] == NULL) {
+   if (tabRequete == NULL || tabRequete[0] == NULL || tabRequete[3] == NULL) {
       printf("Erreur : tabRequete invalide.\n");
    }
 
@@ -161,12 +172,16 @@ static void reponseServeur(const char *buffer, Client c, char* tabRequete[], int
       if (compte_trouve == -1) snprintf(message, BUF_SIZE, "Erreur : compte %d non trouvé.\n", id_compte);
       else{
          if (strcmp(tabRequete[0], "AJOUT") == 0){
-            int somme = atoi(tabRequete[4]);
-            c.comptes[compte_trouve].montant += somme; //On ajoute la somme voulue sur le compte identifié
-            snprintf(message, BUF_SIZE, "AJOUT de %d€ sur votre compte\n", somme);
+            if(!tabRequete[4]){
+               snprintf(message, BUF_SIZE, "somme manquante\n");
+            }else{
+               int somme = atoi(tabRequete[4]);
+               c.comptes[compte_trouve].montant += somme; //On ajoute la somme voulue sur le compte identifié
+               snprintf(message, BUF_SIZE, "AJOUT de %d€ sur votre compte\n", somme);
+            }
          } 
          else if(strcmp(tabRequete[0], "OPERATIONS")==0){
-            snprintf(message, BUF_SIZE, "Liste des 10 dernières opérations :\n");
+            snprintf(message, BUF_SIZE, "Liste des 10 dernières opérations, de la plus ancienne à la plus récente:\n");
             write_client(c.sock, message);
             for(int h=0; h<10; h++){
                if (c.comptes[compte_trouve].operations[h] != NULL) {
@@ -180,32 +195,39 @@ static void reponseServeur(const char *buffer, Client c, char* tabRequete[], int
             snprintf(message, BUF_SIZE, "Votre SOLDE est de %d€\n", c.comptes[compte_trouve].montant );
          }
             else  if(strcmp(tabRequete[0], "RETRAIT")==0){
-            int somme = atoi(tabRequete[4]);
-            c.comptes[compte_trouve].montant -= somme; //On ajoute la somme voulue sur le compte identifié
-            snprintf(message, BUF_SIZE, "RETRAIT de %d€ de votre compte\n", somme);
+               if(!tabRequete[4]){
+                  snprintf(message, BUF_SIZE, "somme manquant\n");
+               }else{
+                  int somme = atoi(tabRequete[4]);
+                  c.comptes[compte_trouve].montant -= somme; //On ajoute la somme voulue sur le compte identifié
+                  snprintf(message, BUF_SIZE, "RETRAIT de %d€ de votre compte\n", somme);
+               }
          }
          else snprintf(message, BUF_SIZE, "Instruction inexistante");
       } 
    } else snprintf(message, BUF_SIZE, "Mode de passe érroné\n");
 
-   // Décaler les opérations existantes vers la droite
-      for (int j = 9; j > 0; j--) {
-         if (c.comptes[compte_trouve].operations[j] != NULL) {
-            free(c.comptes[compte_trouve].operations[j]); // Libère la mémoire de l'opération qui sera écrasée
-         }
-         c.comptes[compte_trouve].operations[j] = c.comptes[compte_trouve].operations[j - 1];
-      }
-      if (c.comptes[compte_trouve].operations[0] != NULL) {
-         free(c.comptes[compte_trouve].operations[0]); // Libère l'ancienne opération en position 0
-      }
-      c.comptes[compte_trouve].operations[0] = strdup(message); // Ajoute la nouvelle opération en première position
-      if (c.comptes[compte_trouve].operations[0] == NULL) {
-         perror("Erreur d'allocation mémoire pour operations[0]");
-         return;
-      }
+   //partie qui met à jour le tableau contenant la liste des 10 dernières opérations d'un client pour son compte compte_touve
+   char* nouvelOp = malloc(BUF_SIZE);
+   if(nouvelOp == NULL){
+      perror("erreur allocation");
+      exit(EXIT_FAILURE);
+   }
+   snprintf(nouvelOp, BUF_SIZE, "%s %s", tabRequete[0], tabRequete[4]);
+   //ON décale les élément du tab operations vers la gauche
+   if(c.comptes[compte_trouve].operations[9]!=NULL){
+      free(c.comptes[compte_trouve].operations[0]);
+   }
+   for(int j=0; j<9; j++){
+      c.comptes[compte_trouve].operations[j] = c.comptes[compte_trouve].operations[j+1];
+   }
+   //Le neuvième élément est l'opération dont l'appel est en train d'être réalisé
+   c.comptes[compte_trouve].operations[9] = nouvelOp;
 
+   //Ecrire le message de retour au client
    write_client(c.sock, message);
 }
+
 
 static int init_connection(void){
    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -368,7 +390,7 @@ Client nouveau_client(int nbCompte, SOCKET csock, const char* buffer, char buffe
    c.comptes->idCompte = nbCompte; //premier compte initialisé à l'ordre dans lequel le client s'est co
    c.comptes->montant = 0;
    for (int i = 0; i < 10; i++) {
-      c.comptes->operations[i] = NULL; //initialisation de toutes les cases de operation du compte à NULL
+      c.comptes->operations[i] = malloc(BUF_SIZE); //initialisation de toutes les cases de operation du compte à NULL
    }
    c.nbCompteclient = 1;
    printf("Nouveau client dans notre banque : %s, id_client : %d, id_compte : %d, somme : %d\n", c.name, actual, c.comptes->idCompte, c.comptes->montant);
@@ -381,3 +403,4 @@ int main(int argc, char **argv){
    app();
    return EXIT_SUCCESS;
 }
+
