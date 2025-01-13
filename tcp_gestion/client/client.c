@@ -7,15 +7,19 @@
 #include "client.h"
 
 
-static void app(const char *address, const char *name)
+static void app(const char *address, const char *name, const char *mdp)
 {
    SOCKET sock = init_connection(address); //adress (du socket déclaré) : localhost
    char buffer[BUF_SIZE];
 
    fd_set rdfs; //rdfs est un Ensemble de descripteurs 
+   
+   // Créer une chaîne concaténée pour envoyer le nom et le mot de passe
+   char entree[BUF_SIZE];
+   snprintf(entree, BUF_SIZE, "%s %s", name, mdp); // Concatène name et mdp avec un espace
 
    /* send our name */
-   write_server(sock, name);
+   write_server(sock, entree);
 
    while(1)
    {
@@ -134,17 +138,15 @@ static void write_server(SOCKET sock, const char *buffer)
    }
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
    if(argc < 2)
    {
       printf("Usage : %s [address] [pseudo]\n", argv[0]);
       return EXIT_FAILURE;
    }
 
-
-   app(argv[1], argv[2]); //argv[0]:nom du prog, argv[1]:adresse serveur, argv[2]:nom du client
-
+   app(argv[1], argv[2], argv[3]); //argv[0]:nom du prog, argv[1]:adresse serveur, argv[2]:nom du client
 
    return EXIT_SUCCESS;
 }
+
