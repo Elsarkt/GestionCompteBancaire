@@ -306,7 +306,9 @@ void requete_type(Client client, const char* buffer, char buffercopy[], char* pa
       //requête d'ajout d'une somme d'argent
       while ((ptrElem) != NULL && cptElem < 5) {
          param[cptElem] = ptrElem;
-         printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #ifdef DEBBUG
+            printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #endif
          cptElem ++;
          ptrElem = strtok(NULL, " "); //demande du prochain param du buffer
       }
@@ -335,18 +337,22 @@ void requete_type(Client client, const char* buffer, char buffercopy[], char* pa
          ptrElem = strtok(NULL, " "); //demande du prochain param du buffer
       }
       param[5] = "0"; //La cinquième case du tableau inutile -> mise automatiquement à 0
+      cptElem++;
       if (cptElem != 5) {
          printf("Usage: SOLDE <id_client> <id_compte> <password> \n");
       }
    }
    else if (strncmp(buffercopy, "OPERATIONS", 10) == 0){
       while ((ptrElem) != NULL && cptElem < 4) {
-         printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #ifdef DEBUGG
+            printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #endif
          param[cptElem] = ptrElem;
          cptElem ++;
          ptrElem = strtok(NULL, " "); //demande du prochain param du buffer
       }
       param[5] = "0"; //La cinquième case du tableau inutile -> mise automatiquement à 0
+      cptElem++;
       if (cptElem != 5) {
          printf("Usage: OPERATIONS <id_client> <id_compte> <password> \n");
       }
@@ -363,7 +369,9 @@ Client nouveau_client(int nbCompte, SOCKET csock, const char* buffer, char buffe
    // char buffercopy[BUF_SIZE]; // Copie locale du buffer
    strncpy(buffercopy, buffer, BUF_SIZE-1); // Copie du buffer pour éviter de modifier l'original
    buffercopy[BUF_SIZE - 1] = '\0'; // Assure la terminaison du buffer
-   printf("buffercopy: %s\n", buffercopy);
+   #ifdef DEBUGG
+      printf("buffercopy: %s\n", buffercopy);
+   #endif
    
    Client c = { csock };
    char* name = strtok(buffercopy, " "); // Récupère le nom

@@ -115,34 +115,6 @@ static Client* get_client(Client *clients, SOCKADDR_IN *csin, int actual)
    return NULL;
 }
 
-// static void remove_client(Client *clients, int to_remove, int *actual)
-// {
-//    /* we remove the client in the array */
-//    memmove(clients + to_remove, clients + to_remove + 1, (*actual - to_remove) * sizeof(Client));
-//    /* number client - 1 */
-//    (*actual)--;
-// }
-
-// static void send_message_to_all_clients(int sock, Client *clients, Client *sender, int actual, const char *buffer, char from_server)
-// {
-//    int i = 0;
-//    char message[BUF_SIZE];
-//    message[0] = 0;
-//    for(i = 0; i < actual; i++)
-//    {
-//       /* we don't send message to the sender */
-//       if(sender != &clients[i])
-//       {
-//      if(from_server == 0)
-//      {
-//         strncpy(message, sender->name, BUF_SIZE - 1);
-//         strncat(message, " : ", sizeof message - strlen(message) - 1);
-//      }
-//      strncat(message, buffer, sizeof message - strlen(message) - 1);
-//      write_client(sock, &clients[i].sin, message);
-//       }
-//    }
-// }
 
 static int init_connection(void)
 {
@@ -210,7 +182,9 @@ void requete_type(Client *client, const char* buffer, char buffercopy[], char* p
       //requête d'ajout d'une somme d'argent
       while ((ptrElem) != NULL && cptElem < 5) {
          param[cptElem] = ptrElem;
-         printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #ifdef DEBUGG
+            printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #endif
          cptElem ++;
          ptrElem = strtok(NULL, " "); //demande du prochain param du buffer
       }
@@ -239,13 +213,16 @@ void requete_type(Client *client, const char* buffer, char buffercopy[], char* p
          ptrElem = strtok(NULL, " "); //demande du prochain param du buffer
       }
       param[5] = "0"; //La cinquième case du tableau inutile -> mise automatiquement à 0
+      cptElem ++;
       if (cptElem != 5) {
          printf("Usage: SOLDE <id_client> <id_compte> <password> \n");
       }
    }
    else if (strncmp(buffercopy, "OPERATIONS", 10) == 0){
       while ((ptrElem) != NULL && cptElem < 4) {
-         printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #ifdef DEBUGG
+            printf("param[%d] : %s\n",cptElem,param[cptElem]);
+         #endif
          param[cptElem] = ptrElem;
          cptElem ++;
          ptrElem = strtok(NULL, " "); //demande du prochain param du buffer
@@ -351,7 +328,9 @@ Client nouveau_client(int nbCompte, SOCKET csock, SOCKADDR_IN *sin, const char* 
    // char buffercopy[BUF_SIZE]; // Copie locale du buffer
    strncpy(buffercopy, buffer, BUF_SIZE-1); // Copie du buffer pour éviter de modifier l'original
    buffercopy[BUF_SIZE - 1] = '\0'; // Assure la terminaison du buffer
-   printf("buffercopy: %s\n", buffercopy);
+   #ifdef DEBUGG
+      printf("buffercopy: %s\n", buffercopy);
+   #endif
    
    Client c ;
    c.sin = *sin;
